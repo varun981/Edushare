@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Hi, {{ current_user.display_name }} 👋</h1>
+  <p class="muted mb-0">Here's what's happening across your EduShare account.</p></div>
+  <div class="row">
+    <a class="btn btn-primary" href="{{ url_for('marketplace.create_listing') }}"><i class="bi bi-plus-lg"></i> Sell a book</a>
+    <a class="btn btn-outline" href="{{ url_for('library.new_book') }}">Add library book</a>
+  </div>
+</div>
+
+<div class="stat-grid section">
+  <div class="stat-card"><i class="bi bi-journal-text"></i><div class="value">{{ my_materials|length }}</div><div class="label">Your marketplace listings</div></div>
+  <div class="stat-card"><i class="bi bi-journal-bookmark"></i><div class="value">{{ my_library_books|length }}</div><div class="label">Library books shared</div></div>
+  <div class="stat-card"><i class="bi bi-inbox"></i><div class="value">{{ incoming_purchase|length + incoming_exchange|length + incoming_donation|length }}</div><div class="label">Recent requests</div></div>
+  <div class="stat-card"><i class="bi bi-bookmark-heart"></i><div class="value">{{ my_borrowings|length }}</div><div class="label">Borrowing records</div></div>
+</div>
+
+<section class="section">
+  <div class="section-head"><h2>Your listings</h2><a class="link" href="{{ url_for('profile.profile') }}">View all →</a></div>
+  <div class="grid grid-4">{% for item in my_materials %}{{ ui.material_card(item) }}{% else %}
+    {{ ui.empty_state('No listings yet', 'List a book to start sharing with your campus.', url_for('marketplace.create_listing'), 'Create listing') }}{% endfor %}</div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Requests waiting for you</h2></div>
+  {% set all_requests = incoming_purchase + incoming_exchange + incoming_donation %}
+  {% if all_requests %}
+  <div class="table-wrap"><table><thead><tr><th>Type</th><th>Book</th><th>From</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for req in incoming_purchase %}<tr><td>Purchase interest</td><td>{{ req.material.title }}</td><td>{{ req.buyer.display_name }}</td><td>{{ ui.status_badge(req.status) }}</td>
+      <td><form method="post" action="{{ url_for('messaging.start_conversation', user_id=req.buyer_id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="topic" value="{{ req.material.title }}"><button class="btn btn-sm btn-outline">Message</button></form></td></tr>{% endfor %}
+    {% for req in incoming_exchange %}<tr><td>Exchange</td><td>{{ req.material.title }}</td><td>{{ req.requester.display_name }}</td><td>{{ ui.status_badge(req.status) }}</td>
+      <td><a class="btn btn-sm btn-outline" href="{{ url_for('exchange.exchange', _anchor='incoming') }}">Review</a></td></tr>{% endfor %}
+    {% for req in incoming_donation %}<tr><td>Donation</td><td>{{ req.material.title }}</td><td>{{ req.requester.display_name }}</td><td>{{ ui.status_badge(req.status) }}</td>
+      <td><a class="btn btn-sm btn-outline" href="{{ url_for('donation.donation', _anchor='incoming') }}">Review</a></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty_state('All caught up', 'New purchase, exchange and donation requests will appear here.', url_for('marketplace.marketplace'), 'Browse marketplace', 'bi-inbox') }}{% endif %}
+</section>
+
+<div class="grid grid-2">
+  <section class="card">
+    <h2>Your borrowings</h2>
+    {% for rec in my_borrowings %}<div class="list-item"><div class="grow">
+      <strong><a href="{{ url_for('library.book_detail', book_id=rec.book_id) }}">{{ rec.book.title }}</a></strong>
+      <small>{{ ui.status_badge(rec.status) }} Due {{ rec.expected_return_date|datefmt }}</small></div></div>
+    {% else %}<p class="muted">No borrowing records yet.</p>{% endfor %}
+  </section>
+  <section class="card">
+    <h2>Your lending</h2>
+    {% for rec in my_lendings %}<div class="list-item"><div class="grow">
+      <strong>{{ rec.book.title }}</strong><small>{{ rec.borrower.display_name }} · {{ ui.status_badge(rec.status) }}</small></div>
+      <a class="btn btn-sm btn-outline" href="{{ url_for('library.community_library', _anchor='lending') }}">Manage</a></div>
+    {% else %}<p class="muted">No lending records yet.</p>{% endfor %}
+  </section>
+</div>
+
+<section class="section">
+  <div class="section-head"><h2>Recent conversations</h2><a class="link" href="{{ url_for('messaging.inbox') }}">Open messages →</a></div>
+  {% for conv in conversations %}
+  <a class="list-item" href="{{ url_for('messaging.conversation', conversation_id=conv.id) }}">
+    <div class="conversation-avatar">{{ conv.other_participant(current_user.id).display_name[0]|upper }}</div>
+    <div class="grow"><strong>{{ conv.other_participant(current_user.id).display_name }}</strong>
+      <small>{{ conv.last_message.body|truncate(70) if conv.last_message else 'No messages yet' }}</small></div>
+    {% if conv.unread_count_for(current_user.id) %}<span class="badge badge-info">{{ conv.unread_count_for(current_user.id) }} new</span>{% endif %}
+  </a>
+  {% else %}{{ ui.empty_state('No conversations yet', 'Contact a seller or book owner to start chatting.', url_for('marketplace.marketplace'), 'Browse marketplace', 'bi-chat-dots') }}{% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<nav class="mb-2"><a href="{{ url_for('main.index') }}">Home</a> / <a href="{{ url_for('library.community_library') }}">Community Library</a> / {{ book.title|truncate(40) }}</nav>
+<div class="detail-grid">
+  <div class="card">
+    {% if book.primary_image %}<img id="main-image" class="detail-image" src="{{ book.primary_image.url }}" alt="{{ book.title }}">
+    {% else %}<div id="main-image" class="detail-placeholder"><i class="bi bi-journal-bookmark"></i></div>{% endif %}
+    {% if book.images|length > 1 %}<div class="thumb-row">
+      {% for image in book.images %}<button type="button" class="thumb {% if loop.first %}active{% endif %}" data-image-url="{{ image.url }}"><img src="{{ image.url }}" alt=""></button>{% endfor %}
+    </div>{% endif %}
+  </div>
+  <div class="stack">
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><span class="badge badge-info">Community Library</span>{{ ui.status_badge(book.status) }}</div>
+      <h1 class="detail-title mt-1">{{ book.title }}</h1>
+      <p class="muted">{{ book.author or 'Community collection' }} · {{ book.subject or 'General' }}</p>
+      <p style="white-space:pre-line">{{ book.description or 'No description provided.' }}</p>
+      <div class="info-list">
+        <div><i class="bi bi-gem"></i><span>Condition: <strong>{{ book.condition }}</strong></span></div>
+        <div><i class="bi bi-calendar-check"></i><span>Default loan: <strong>{{ book.borrowing_duration_days }} days</strong></span></div>
+        <div><i class="bi bi-geo-alt"></i><span>{{ book.location or 'Location not set' }}{% if distance %}<span class="distance-pill">~{{ distance|round(1) }} km</span>{% endif %}</span></div>
+      </div>
+      <div class="seller-card">
+        {% if book.owner.profile_image and book.owner.profile_image != 'default-avatar.svg' %}
+          <img class="seller-avatar" src="{{ url_for('static', filename='uploads/' ~ book.owner.profile_image) }}" alt="">
+        {% else %}<div class="seller-avatar">{{ book.owner.display_name[0]|upper }}</div>{% endif %}
+        <div><strong><a href="{{ url_for('profile.public_profile', user_id=book.owner.id) }}">{{ book.owner.display_name }}</a></strong><br>
+          <small>Book owner</small></div>
+      </div>
+      {% if current_user.is_authenticated and (book.owner_id == current_user.id or current_user.is_admin) %}
+      <div class="row mt-2">
+        <a class="btn btn-sm btn-outline" href="{{ url_for('library.edit_book', book_id=book.id) }}"><i class="bi bi-pencil"></i> Edit</a>
+        <form method="post" action="{{ url_for('library.toggle_availability', book_id=book.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline">Toggle availability</button></form>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if current_user.is_authenticated and current_user.id != book.owner_id and book.status == 'available' %}
+    <div class="card">
+      <h3><i class="bi bi-bookmark-heart"></i> Request to borrow</h3>
+      <p class="muted mb-1">No borrowing charges. The owner will review your request.</p>
+      <form method="post" action="{{ url_for('library.borrow_book', book_id=book.id) }}" class="stack">
+        {{ form.hidden_tag() }}
+        {{ ui.field(form.requested_duration_days, 'bi-calendar') }}
+        {{ ui.field(form.message, hint='Optional note to the owner') }}
+        {{ form.submit(class='btn btn-primary btn-block') }}
+      </form>
+    </div>
+    {% endif %}
+    {% if current_user.is_authenticated and current_user.id != book.owner_id %}
+    <div class="card">
+      <h3><i class="bi bi-flag"></i> Report this book</h3>
+      <form method="post" action="{{ url_for('library.report_book', book_id=book.id) }}" class="stack">
+        {{ report_form.hidden_tag() }}
+        {{ ui.field(report_form.reason, 'bi-exclamation-triangle') }}
+        {{ ui.field(report_form.details, '', 'Optional details') }}
+        <button class="btn btn-sm btn-outline">Submit report</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<section class="section mt-3">
+  <div class="section-head"><h2>Borrowing history</h2><p class="muted">Transparent record for this book</p></div>
+  {% if history %}
+  <div class="table-wrap"><table><thead><tr><th>Borrower</th><th>Status</th><th>Borrowed</th><th>Expected</th><th>Returned</th></tr></thead><tbody>
+    {% for rec in history %}<tr>
+      <td>{{ rec.borrower.display_name }}</td><td>{{ ui.status_badge(rec.status) }}</td>
+      <td>{{ rec.borrow_date|datefmt }}</td><td>{{ rec.expected_return_date|datefmt }}</td>
+      <td>{{ rec.actual_return_date|datefmt }}</td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty_state('No borrowing history', 'This book has not been borrowed yet.', url_for('library.community_library'), 'Browse library', 'bi-clock-history') }}{% endif %}
+</section>
+{% endblock %}

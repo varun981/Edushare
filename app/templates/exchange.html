@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Book exchange</h1><p class="muted mb-0">Swap books you've finished for something new to read.</p></div>
+  <a class="btn btn-primary" href="{{ url_for('exchange.new_exchange_book') }}"><i class="bi bi-plus-lg"></i> Add exchange book</a>
+</div>
+
+<div class="tabs" data-tabs>
+  <button class="tab active" data-tab="browse"><i class="bi bi-search"></i> Browse</button>
+  {% if current_user.is_authenticated %}
+    <button class="tab" data-tab="my-listings"><i class="bi bi-journal-text"></i> My books ({{ my_listings|length }})</button>
+    <button class="tab" data-tab="my-requests"><i class="bi bi-send"></i> My requests ({{ sent_requests|length }})</button>
+    <button class="tab" data-tab="incoming"><i class="bi bi-inbox"></i> Requests received ({{ received_requests|length }})</button>
+  {% endif %}
+</div>
+
+<div class="tab-panel" data-tab-panel="browse">
+  <div class="toolbar"><span class="result-count">{{ pagination.total }} exchangeable books</span>
+    <form method="get" action="{{ url_for('exchange.exchange') }}" class="row">
+      <input type="search" name="q" placeholder="Search exchange books" value="{{ request.args.get('q','') }}" style="width:auto">
+      <button class="btn btn-sm btn-outline" type="submit"><i class="bi bi-search"></i></button>
+    </form>
+  </div>
+  <div class="grid grid-3">
+    {% for item in pagination.items %}{{ ui.material_card(item) }}{% else %}
+      {{ ui.empty_state('No exchange books found', 'List a book for exchange and start swapping.', url_for('exchange.new_exchange_book'), 'Add exchange book', 'bi-arrow-repeat') }}{% endfor %}
+  </div>
+  {{ ui.pagination(pagination, 'exchange.exchange') }}
+</div>
+
+<div class="tab-panel" data-tab-panel="my-listings" hidden>
+  {% if my_listings %}
+  <div class="table-wrap"><table><thead><tr><th>Book</th><th>Status</th><th>Requests</th><th></th></tr></thead><tbody>
+    {% for item in my_listings %}<tr>
+      <td><a href="{{ url_for('marketplace.book_detail', material_id=item.id) }}">{{ item.title }}</a></td>
+      <td>{{ ui.status_badge(item.status) }}</td><td>{{ item.exchange_requests|length }}</td>
+      <td><a class="btn btn-sm btn-outline" href="{{ url_for('marketplace.edit_listing', material_id=item.id) }}">Edit</a></td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty_state('No exchange books listed', 'Add a book to get swap requests.', url_for('exchange.new_exchange_book'), 'Add exchange book', 'bi-arrow-repeat') }}{% endif %}
+</div>
+
+<div class="tab-panel" data-tab-panel="my-requests" hidden>
+  {% if sent_requests %}
+  <div class="table-wrap"><table><thead><tr><th>Book</th><th>Owner</th><th>Status</th><th>Sent</th></tr></thead><tbody>
+    {% for req in sent_requests %}<tr>
+      <td><a href="{{ url_for('marketplace.book_detail', material_id=req.material_id) }}">{{ req.material.title }}</a></td>
+      <td>{{ req.owner.display_name }}</td><td>{{ ui.status_badge(req.status) }}</td><td>{{ req.created_at|datefmt }}</td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty_state('No exchange requests sent', 'Browse exchangeable books and send a swap request.', url_for('exchange.exchange'), 'Browse exchange books', 'bi-arrow-repeat') }}{% endif %}
+</div>
+
+<div class="tab-panel" data-tab-panel="incoming" hidden>
+  {% if received_requests %}
+  <div class="table-wrap"><table><thead><tr><th>Book</th><th>From</th><th>Offering</th><th>Status</th><th>Action</th></tr></thead><tbody>
+    {% for req in received_requests %}<tr>
+      <td>{{ req.material.title }}</td>
+      <td><a href="{{ url_for('profile.public_profile', user_id=req.requester_id) }}">{{ req.requester.display_name }}</a></td>
+      <td>{{ req.offered_material.title if req.offered_material else '—' }}</td>
+      <td>{{ ui.status_badge(req.status) }}</td>
+      <td><div class="table-actions">
+        {% if req.status == 'pending' %}
+        <form method="post" action="{{ url_for('exchange.accept_request', request_id=req.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-accent">Accept</button></form>
+        <form method="post" action="{{ url_for('exchange.reject_request', request_id=req.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline">Reject</button></form>
+        {% elif req.status == 'accepted' %}
+        <form method="post" action="{{ url_for('exchange.complete_request', request_id=req.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-primary">Complete swap</button></form>
+        {% else %}—{% endif %}
+      </div></td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty_state('No requests received', 'When someone requests one of your books, it will appear here.', url_for('exchange.new_exchange_book'), 'List a book', 'bi-inbox') }}{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Manage listings</h1><p class="muted mb-0">{{ pagination.total }} listing(s) on EduShare</p></div></div>
+{% include "_admin_nav.html" %}
+
+<form method="get" class="row mt-2 mb-2">
+  <select name="type" style="width:auto" aria-label="Filter by listing type">
+    <option value="">All types</option>
+    <option value="sale" {% if request.args.get('type') == 'sale' %}selected{% endif %}>For sale</option>
+    <option value="exchange" {% if request.args.get('type') == 'exchange' %}selected{% endif %}>Exchange</option>
+    <option value="donation" {% if request.args.get('type') == 'donation' %}selected{% endif %}>Donation</option>
+  </select>
+  <select name="status" style="width:auto" aria-label="Filter by status">
+    <option value="">All statuses</option>
+    <option value="available" {% if request.args.get('status') == 'available' %}selected{% endif %}>Available</option>
+    <option value="reserved" {% if request.args.get('status') == 'reserved' %}selected{% endif %}>Reserved</option>
+    <option value="sold" {% if request.args.get('status') == 'sold' %}selected{% endif %}>Sold</option>
+    <option value="unavailable" {% if request.args.get('status') == 'unavailable' %}selected{% endif %}>Unavailable</option>
+  </select>
+  <button class="btn btn-sm btn-outline" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+  <a class="btn btn-sm btn-outline" href="{{ url_for('admin.listings') }}">Clear</a>
+</form>
+
+<div class="table-wrap"><table><thead><tr><th>Listing</th><th>Type</th><th>Owner</th><th>Price</th><th>Status</th><th>Listed</th><th>Action</th></tr></thead><tbody>
+  {% for item in pagination.items %}<tr>
+    <td>
+      <a href="{{ url_for('marketplace.book_detail', material_id=item.id) }}"><strong>{{ item.title|truncate(45) }}</strong></a>
+      <br><small class="muted">{{ item.category.name if item.category else 'Uncategorised' }}{% if item.author %} · {{ item.author }}{% endif %}</small>
+    </td>
+    <td><span class="badge badge-info">{{ item.listing_type|capitalize }}</span></td>
+    <td><a href="{{ url_for('profile.public_profile', user_id=item.user_id) }}">{{ item.seller.display_name }}</a></td>
+    <td>{% if item.listing_type == 'sale' %}{{ item.price|currency }}{% else %}Free{% endif %}</td>
+    <td>{{ ui.status_badge(item.status) }}</td>
+    <td>{{ item.created_at|datefmt }}</td>
+    <td>
+      <form method="post" action="{{ url_for('admin.remove_listing', material_id=item.id) }}" data-confirm="Permanently remove '{{ item.title }}' from the platform?">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-danger"><i class="bi bi-trash"></i> Remove</button>
+      </form>
+    </td>
+  </tr>{% else %}
+    <tr><td colspan="7">{{ ui.empty_state('No listings found', 'Try changing the filters above.', icon='bi-journal-text') }}</td></tr>
+  {% endfor %}
+</tbody></table></div>
+{{ ui.pagination(pagination, 'admin.listings',
+                 type=request.args.get('type', ''), status=request.args.get('status', '')) }}
+{% endblock %}

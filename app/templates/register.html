@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="auth-shell">
+  <div class="card auth-card" style="max-width:640px">
+    <a class="brand" href="{{ url_for('main.index') }}"><span class="brand-mark"><i class="bi bi-journal-bookmark-fill"></i></span><span class="brand-name">Edu<span>Share</span></span></a>
+    <p class="subtitle">Join your campus sharing community — it's free.</p>
+    <form method="post" action="{{ url_for('auth.register') }}" class="form-grid" data-geolocate-form>
+      {{ form.hidden_tag() }}
+      {{ ui.field(form.full_name, 'bi-person') }}
+      {{ ui.field(form.email, 'bi-envelope') }}
+      {{ ui.field(form.phone, 'bi-telephone') }}
+      {{ ui.field(form.educational_qualification, 'bi-mortarboard') }}
+      {{ ui.field(form.institution, 'bi-building') }}
+      {{ ui.field(form.location, 'bi-geo-alt', 'City, neighbourhood or campus area.') }}
+      <div class="field full">
+        <button type="button" class="btn btn-sm btn-outline" data-geolocate><i class="bi bi-crosshair"></i> Use my current location (optional)</button>
+        <span class="hint">Location is optional and only requested when you tap this button.</span>
+      </div>
+      {{ form.latitude() }}{{ form.longitude() }}
+      {{ ui.field(form.password, 'bi-lock', 'At least 8 characters with a letter and a number.') }}
+      {{ ui.field(form.confirm_password, 'bi-lock') }}
+      <div class="field full">{{ form.submit(class='btn btn-primary btn-lg btn-block') }}</div>
+    </form>
+    <div class="auth-alt">Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></div>
+  </div>
+</div>
+{% endblock %}

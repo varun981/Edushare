@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Manage users</h1><p class="muted mb-0">{{ pagination.total }} registered account(s)</p></div></div>
+{% include "_admin_nav.html" %}
+<form method="get" class="row mt-2 mb-2"><input type="search" name="q" value="{{ q }}" placeholder="Search name, email or location" style="width:auto">
+  <button class="btn btn-sm btn-outline">Search</button></form>
+<div class="table-wrap"><table><thead><tr><th>User</th><th>Qualification</th><th>Location</th><th>Joined</th><th>Role / status</th><th>Actions</th></tr></thead><tbody>
+  {% for user in pagination.items %}<tr>
+    <td><strong>{{ user.display_name }}</strong><br><small>{{ user.email }}</small></td>
+    <td>{{ user.educational_qualification or '—' }}</td><td>{{ user.location or '—' }}</td>
+    <td>{{ user.created_at|datefmt }}</td>
+    <td>{% if user.is_admin %}<span class="badge badge-info">Admin</span>{% else %}<span class="badge badge-muted">Student</span>{% endif %}
+      {% if user.is_blocked %}<span class="badge badge-bad">Suspended</span>{% endif %}</td>
+    <td><div class="table-actions">
+      <form method="post" action="{{ url_for('admin.toggle_block', user_id=user.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline">{{ 'Unblock' if user.is_blocked else 'Block' }}</button></form>
+      <form method="post" action="{{ url_for('admin.toggle_admin', user_id=user.id) }}" data-confirm="Change this user's administrator role?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline">{{ 'Remove admin' if user.is_admin else 'Make admin' }}</button></form>
+    </div></td>
+  </tr>{% endfor %}
+</tbody></table></div>
+{{ ui.pagination(pagination, 'admin.users', q=q) }}
+{% endblock %}

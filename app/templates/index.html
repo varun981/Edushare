@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<section class="hero">
+  <span class="hero-badge"><i class="bi bi-stars"></i> Learn together. Share together.</span>
+  <h1>{% if current_user.is_authenticated %}Welcome back, {{ current_user.display_name }}!{% else %}Every book deserves another reader.{% endif %}</h1>
+  <p>Buy, sell, exchange, donate and borrow educational materials with students in your community — all in one place, with no borrowing fees.</p>
+  <form class="hero-search" action="{{ url_for('main.search') }}" method="get" role="search">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" placeholder="Try “engineering mathematics” or “handwritten notes”" aria-label="Search books and materials">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </form>
+  <div class="quick-actions">
+    <a class="quick-action" href="{{ url_for('marketplace.marketplace') }}"><i class="bi bi-cart3"></i><span>Buy Books</span></a>
+    <a class="quick-action" href="{{ url_for('marketplace.create_listing') }}"><i class="bi bi-tag"></i><span>Sell Books</span></a>
+    <a class="quick-action" href="{{ url_for('exchange.exchange') }}"><i class="bi bi-arrow-repeat"></i><span>Exchange Books</span></a>
+    <a class="quick-action" href="{{ url_for('donation.new_donation') }}"><i class="bi bi-gift"></i><span>Donate Books</span></a>
+    <a class="quick-action" href="{{ url_for('library.community_library') }}"><i class="bi bi-journal-bookmark"></i><span>Community Library</span></a>
+  </div>
+</section>
+
+{% if current_user.is_authenticated and my_stats %}
+<section class="section">
+  <div class="stat-grid">
+    <div class="stat-card"><i class="bi bi-journal-text"></i><div class="value">{{ my_stats.listings }}</div><div class="label">Your listings</div></div>
+    <div class="stat-card"><i class="bi bi-bell"></i><div class="value">{{ my_stats.incoming_requests }}</div><div class="label">Pending requests</div></div>
+    <div class="stat-card"><i class="bi bi-bookmark-heart"></i><div class="value">{{ my_stats.borrowed }}</div><div class="label">Books on loan</div></div>
+    <div class="stat-card"><i class="bi bi-chat-dots"></i><div class="value">{{ unread_messages }}</div><div class="label">Unread messages</div></div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head"><div><h2>Browse by category</h2><p>Find exactly what you are studying</p></div></div>
+  <div class="category-scroll">
+    {% for category in categories %}
+    <a class="category-tile" href="{{ url_for('main.search', category_id=category.id) }}">
+      <i class="bi {{ category.icon or 'bi-book' }}"></i><span>{{ category.name }}</span>
+    </a>
+    {% else %}
+      <p class="muted">Categories will appear here once configured.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><div><h2>Recently uploaded</h2><p>Fresh materials shared by students</p></div>
+    <a class="link" href="{{ url_for('main.search') }}">See all →</a></div>
+  <div class="grid grid-4">
+    {% for item in recent %}{{ ui.material_card(item) }}{% else %}{{ ui.empty_state('Nothing here yet', 'Be the first to share a book with your community.', url_for('marketplace.create_listing'), 'List a book') }}{% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><div><h2>Featured books</h2><p>Popular picks from the marketplace</p></div>
+    <a class="link" href="{{ url_for('marketplace.marketplace') }}">Marketplace →</a></div>
+  <div class="grid grid-4">
+    {% for item in featured %}{{ ui.material_card(item) }}{% else %}{{ ui.empty_state('No featured books yet', 'Popular listings will show up here.', url_for('marketplace.marketplace'), 'Browse marketplace') }}{% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><div><h2>Free books for you</h2><p>Generously donated by the community</p></div>
+    <a class="link" href="{{ url_for('donation.donation') }}">View all free books →</a></div>
+  <div class="grid grid-4">
+    {% for item in donated %}{{ ui.material_card(item) }}{% else %}{{ ui.empty_state('No donations yet', 'Donated books will appear here. Check back soon!', url_for('donation.donation'), 'Visit free books', 'bi-gift') }}{% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><div><h2>Community Library</h2><p>Borrow physical books free of charge</p></div>
+    <a class="link" href="{{ url_for('library.community_library') }}">Open library →</a></div>
+  <div class="grid grid-4">
+    {% for book in library_books %}{{ ui.library_card(book) }}{% else %}{{ ui.empty_state('The library is waiting', 'Add a book or browse later — borrowing is always free.', url_for('library.community_library'), 'Open library', 'bi-journal-bookmark') }}{% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><div><h2>Available for exchange</h2><p>Swap what you have for what you need</p></div>
+    <a class="link" href="{{ url_for('exchange.exchange') }}">Explore exchanges →</a></div>
+  <div class="grid grid-4">
+    {% for item in for_exchange %}{{ ui.material_card(item) }}{% else %}{{ ui.empty_state('No exchange books yet', 'List a book you have finished and swap for another.', url_for('exchange.new_exchange_book'), 'Add exchange book', 'bi-arrow-repeat') }}{% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><div><h2>Nearby resources</h2>
+    <p>{% if location_text %}Around {{ location_text }}{% else %}Set your location to see resources near you{% endif %}</p></div>
+    {% if current_user.is_authenticated %}<a class="link" href="{{ url_for('profile.edit_profile') }}">Change location →</a>{% endif %}
+  </div>
+  <div class="grid grid-3">
+    {% for item in nearby %}
+      {% if item is defined and item.listing_type is defined %}{{ ui.material_card(item) }}{% else %}{{ ui.library_card(item) }}{% endif %}
+    {% else %}
+      {{ ui.empty_state('No nearby results', 'Add your location in your profile to discover books close to you.', url_for('profile.edit_profile') if current_user.is_authenticated else url_for('auth.register'), 'Update location' if current_user.is_authenticated else 'Join EduShare', 'bi-geo-alt') }}
+    {% endfor %}
+  </div>
+</section>
+
+{% if not current_user.is_authenticated %}
+<section class="card text-center">
+  <h2>Ready to share your books?</h2>
+  <p class="muted">Create a free student account to list books, send requests and borrow from the community library.</p>
+  <div class="row" style="justify-content:center">
+    <a class="btn btn-primary btn-lg" href="{{ url_for('auth.register') }}">Join EduShare</a>
+    <a class="btn btn-outline btn-lg" href="{{ url_for('auth.login') }}">Log in</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

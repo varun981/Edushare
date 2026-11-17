@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Edit profile</h1><p class="muted mb-0">Keep your details current so other students can find you.</p></div></div>
+<div class="card form-card">
+  <form method="post" enctype="multipart/form-data" class="form-grid">
+    {{ form.hidden_tag() }}
+    {{ ui.field(form.full_name, 'bi-person') }}
+    {{ ui.field(form.phone, 'bi-telephone') }}
+    {{ ui.field(form.educational_qualification, 'bi-mortarboard') }}
+    {{ ui.field(form.institution, 'bi-building') }}
+    {{ ui.field(form.location, 'bi-geo-alt') }}
+    <div class="field"><button type="button" class="btn btn-sm btn-outline" data-geolocate><i class="bi bi-crosshair"></i> Use current location</button></div>
+    {{ ui.field(form.bio, css='full') }}
+    <div class="field full" data-image-preview>{{ form.profile_image.label }}{{ form.profile_image(class='form-control') }}
+      <div class="thumb-row image-preview-row"></div><span class="hint">JPG, PNG, WEBP or GIF up to 3 MB.</span></div>
+    <div class="field full"><a class="btn btn-outline" href="{{ url_for('profile.change_password') }}">Change password instead</a>
+      {{ form.submit(class='btn btn-primary') }}</div>
+  </form>
+</div>
+{% endblock %}

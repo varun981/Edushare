@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Search results</h1>
+  <p class="muted mb-0">{% if query_text %}Results for “{{ query_text }}”{% else %}Browse all shared materials{% endif %} · {{ pagination.total }} listing{{ '' if pagination.total == 1 else 's' }}</p></div></div>
+
+<div class="layout-sidebar">
+  <form class="filter-panel desktop-sticky" method="get" action="{{ url_for('main.search') }}">
+    <h3><i class="bi bi-funnel"></i> Filters</h3>
+    <div class="field"><label>Search</label><input type="search" name="q" value="{{ request.args.get('q','') }}" placeholder="Title, author, subject…"></div>
+    <div class="field"><label>Category</label><select name="category_id"><option value="">All categories</option>
+      {% for category in categories %}<option value="{{ category.id }}" {% if request.args.get('category_id', 0)|int == category.id %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Educational level</label><select name="level">
+      {% for value in ['','School','PUC','Diploma','Engineering','Medical','Degree','Competitive Exam'] %}
+      <option value="{{ value }}" {% if request.args.get('level')==value %}selected{% endif %}>{{ value or 'Any level' }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Condition</label><select name="condition">
+      {% for value in ['','New','Like New','Good','Fair','Worn'] %}<option value="{{ value }}" {% if request.args.get('condition')==value %}selected{% endif %}>{{ value or 'Any condition' }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Location</label><input name="location" value="{{ request.args.get('location','') }}" placeholder="City or area"></div>
+    <div class="grid grid-2">
+      <div class="field"><label>Min ₹</label><input type="number" min="0" name="min_price" value="{{ request.args.get('min_price','') }}"></div>
+      <div class="field"><label>Max ₹</label><input type="number" min="0" name="max_price" value="{{ request.args.get('max_price','') }}"></div>
+    </div>
+    <div class="field"><label>Availability</label><select name="availability">
+      {% for value,label in [('','Available / Reserved'),('available','Available'),('reserved','Reserved'),('sold','Sold'),('unavailable','Unavailable')] %}
+      <option value="{{ value }}" {% if request.args.get('availability')==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Sort by</label><select name="sort" data-auto-submit>
+      {% for value,label in [('recent','Recently added'),('price_asc','Price: Low to High'),('price_desc','Price: High to Low')] %}
+      <option value="{{ value }}" {% if request.args.get('sort')==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <button class="btn btn-primary btn-block" type="submit">Apply filters</button>
+    <a class="btn btn-outline btn-block mt-1" href="{{ url_for('main.search') }}">Clear all</a>
+  </form>
+
+  <div>
+    {% if library_books %}
+    <section class="section">
+      <div class="section-head"><h2>From the Community Library</h2></div>
+      <div class="grid grid-3">{% for book in library_books %}{{ ui.library_card(book) }}{% endfor %}</div>
+    </section>
+    {% endif %}
+    <div class="grid grid-3">
+      {% for item in pagination.items %}{{ ui.material_card(item) }}{% else %}
+        {{ ui.empty_state('No matching materials', 'Try broader keywords or remove a filter.', url_for('main.search'), 'Show all materials') }}{% endfor %}
+    </div>
+    {{ ui.pagination(pagination, 'main.search') }}
+  </div>
+</div>
+{% endblock %}

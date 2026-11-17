@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="description" content="EduShare – buy, sell, exchange, donate and borrow educational materials with your student community.">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>{% block title %}{{ title or 'EduShare' }}{% endblock %} · EduShare</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <link rel="icon" href="{{ url_for('static', filename='images/icon-192.png') }}" type="image/png">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-192.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div id="loading-overlay" aria-hidden="true"><span class="spinner"></span></div>
+
+  <header class="app-header">
+    <div class="container nav-inner">
+      <a class="brand" href="{{ url_for('main.index') }}" aria-label="EduShare home">
+        <span class="brand-mark"><i class="bi bi-journal-bookmark-fill"></i></span>
+        <span class="brand-name">Edu<span>Share</span></span>
+      </a>
+
+      <form class="top-search" action="{{ url_for('main.search') }}" method="get" role="search">
+        <i class="bi bi-search"></i>
+        <input type="search" name="q" placeholder="Search books, notes, authors…" aria-label="Search materials">
+        <button class="btn btn-sm btn-primary" type="submit">Search</button>
+      </form>
+
+      <nav class="desktop-nav" aria-label="Main navigation">
+        <a href="{{ url_for('main.index') }}" class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}">Home</a>
+        <a href="{{ url_for('marketplace.marketplace') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('marketplace') %}active{% endif %}">Marketplace</a>
+        <a href="{{ url_for('exchange.exchange') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('exchange') %}active{% endif %}">Exchange</a>
+        <a href="{{ url_for('donation.donation') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('donation') %}active{% endif %}">Donate</a>
+        <a href="{{ url_for('library.community_library') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('library') %}active{% endif %}">Library</a>
+        <a href="{{ url_for('messaging.inbox') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('messaging') %}active{% endif %}">Messages
+          {% if unread_messages %}<span class="nav-dot">{{ unread_messages }}</span>{% endif %}
+        </a>
+      </nav>
+
+      <div class="header-actions">
+        <a class="icon-btn" href="{{ url_for('notifications.notifications') }}" aria-label="Notifications" title="Notifications">
+          <i class="bi bi-bell"></i>{% if unread_notifications %}<span class="nav-dot">{{ unread_notifications }}</span>{% endif %}
+        </a>
+        <button type="button" class="btn btn-sm btn-install" id="install-btn" hidden><i class="bi bi-download"></i> Install</button>
+        {% if current_user.is_authenticated %}
+          <div class="user-menu">
+            <button type="button" class="avatar-btn" id="user-menu-btn" aria-expanded="false" aria-controls="user-dropdown">
+              {% if current_user.profile_image and current_user.profile_image != 'default-avatar.svg' %}
+                <img src="{{ url_for('static', filename='uploads/' ~ current_user.profile_image) }}" alt="">
+              {% elif current_user.profile_image %}
+                <img src="{{ url_for('static', filename='images/' ~ current_user.profile_image) }}" alt="">
+              {% else %}<span>{{ current_user.display_name[0]|upper }}</span>{% endif %}
+            </button>
+            <div class="dropdown" id="user-dropdown" hidden>
+              <div class="dropdown-head"><strong>{{ current_user.display_name }}</strong><small>{{ current_user.email }}</small></div>
+              <a href="{{ url_for('profile.profile') }}"><i class="bi bi-person"></i> My profile</a>
+              <a href="{{ url_for('main.dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+              {% if current_user.is_admin %}<a href="{{ url_for('admin.dashboard') }}"><i class="bi bi-shield-check"></i> Admin panel</a>{% endif %}
+              <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"><i class="bi bi-box-arrow-right"></i> Log out</button>
+              </form>
+            </div>
+          </div>
+        {% else %}
+          <a class="btn btn-sm btn-outline" href="{{ url_for('auth.login') }}">Log in</a>
+          <a class="btn btn-sm btn-primary" href="{{ url_for('auth.register') }}">Join free</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main container {% block main_class %}{% endblock %}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack" role="status">
+          {% for category, message in messages %}
+            <div class="toast toast-{{ category }}" data-toast role="alert">
+              <i class="bi {% if category == 'success' %}bi-check-circle{% elif category in ('danger','warning') %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}"></i>
+              <span>{{ message }}</span>
+              <button type="button" class="toast-close" aria-label="Dismiss">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="app-footer">
+    <div class="container footer-inner">
+      <div><span class="brand-name">Edu<span>Share</span></span><p>Sharing knowledge, one book at a time.</p></div>
+      <div class="footer-links">
+        <a href="{{ url_for('main.index') }}">Home</a>
+        <a href="{{ url_for('marketplace.marketplace') }}">Marketplace</a>
+        <a href="{{ url_for('library.community_library') }}">Community Library</a>
+        <a href="{{ url_for('main.search') }}">Search</a>
+      </div>
+      <small>© {{ current_year }} EduShare. Built for students, by students.</small>
+    </div>
+  </footer>
+
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="{{ url_for('main.index') }}" class="mobile-nav-item {% if request.endpoint == 'main.index' %}active{% endif %}">
+      <i class="bi bi-house"></i><span>Home</span></a>
+    <a href="{{ url_for('main.search') }}" class="mobile-nav-item {% if request.endpoint == 'main.search' %}active{% endif %}">
+      <i class="bi bi-search"></i><span>Search</span></a>
+    <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.login') }}" class="mobile-nav-item mobile-add">
+      <span class="add-circle"><i class="bi bi-plus-lg"></i></span><span>Add listing</span></a>
+    <a href="{{ url_for('library.community_library') }}" class="mobile-nav-item {% if request.endpoint and request.endpoint.startswith('library') %}active{% endif %}">
+      <i class="bi bi-journal-bookmark"></i><span>Library</span></a>
+    <a href="{{ url_for('profile.profile') if current_user.is_authenticated else url_for('auth.login') }}" class="mobile-nav-item {% if request.endpoint and request.endpoint.startswith('profile') %}active{% endif %}">
+      <i class="bi bi-person"></i><span>Profile</span></a>
+  </nav>
+
+  <div id="toast-container" aria-live="polite"></div>
+
+  <div class="modal-backdrop" id="confirm-modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="modal-icon"><i class="bi bi-question-circle"></i></div>
+      <h3 id="confirm-title">Are you sure?</h3>
+      <p id="confirm-message">This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="confirm-cancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirm-ok">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

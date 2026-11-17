@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Admin dashboard</h1><p class="muted mb-0">Platform health and moderation overview.</p></div></div>
+{% include "_admin_nav.html" %}
+
+<div class="stat-grid section">
+  <div class="stat-card"><i class="bi bi-people"></i><div class="value">{{ stats.users }}</div><div class="label">Registered users</div></div>
+  <div class="stat-card"><i class="bi bi-journal-text"></i><div class="value">{{ stats.listings }}</div><div class="label">Educational listings</div></div>
+  <div class="stat-card"><i class="bi bi-arrow-repeat"></i><div class="value">{{ stats.exchange_requests }}</div><div class="label">Exchange requests</div></div>
+  <div class="stat-card"><i class="bi bi-gift"></i><div class="value">{{ stats.donation_requests }}</div><div class="label">Donation requests</div></div>
+  <div class="stat-card"><i class="bi bi-journal-bookmark"></i><div class="value">{{ stats.library_books }}</div><div class="label">Community library books</div></div>
+  <div class="stat-card"><i class="bi bi-bookmark-heart"></i><div class="value">{{ stats.borrowings }}</div><div class="label">Borrowing records</div></div>
+  <div class="stat-card"><i class="bi bi-chat-dots"></i><div class="value">{{ stats.messages }}</div><div class="label">Messages</div></div>
+  <div class="stat-card"><i class="bi bi-flag"></i><div class="value">{{ stats.reports }}</div><div class="label">Open reports</div></div>
+</div>
+
+<div class="grid grid-2">
+  <section class="card"><h2>Recent users</h2>
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Joined</th></tr></thead><tbody>
+      {% for user in recent_users %}<tr><td><a href="{{ url_for('profile.public_profile', user_id=user.id) }}">{{ user.display_name }}</a></td>
+        <td>{{ user.email }}</td><td>{{ user.created_at|datefmt }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  <section class="card"><h2>Recent listings</h2>
+    <div class="table-wrap"><table><thead><tr><th>Title</th><th>Type</th><th>Owner</th></tr></thead><tbody>
+      {% for item in recent_listings %}<tr><td><a href="{{ url_for('marketplace.book_detail', material_id=item.id) }}">{{ item.title|truncate(35) }}</a></td>
+        <td>{{ item.listing_type|capitalize }}</td><td>{{ item.seller.display_name }}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  <section class="card"><h2>Attention needed</h2>
+    <p><strong>{{ pending_borrows }}</strong> pending borrow request(s)</p>
+    <p><strong>{{ overdue }}</strong> overdue loan(s)</p>
+    <p><strong>{{ stats.reports }}</strong> open content report(s)</p>
+    <a class="btn btn-sm btn-outline" href="{{ url_for('admin.borrowing') }}">Review borrowing</a>
+  </section>
+  <section class="card"><h2>Open reports</h2>
+    {% for report in open_reports %}<div class="list-item"><div class="grow"><strong>{{ report.reason }}</strong>
+      <small>{{ report.material.title if report.material else 'User report' }}</small></div>
+      <a class="btn btn-sm btn-outline" href="{{ url_for('admin.reports') }}">Review</a></div>
+    {% else %}<p class="muted">No open reports. Great job, community!</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

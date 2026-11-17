@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="centered-page">
+  <div>
+    <i class="bi bi-wifi-off" style="font-size:4rem;color:var(--primary)"></i>
+    <h1 class="mt-2">You're offline</h1>
+    <p class="muted">EduShare needs an internet connection to show live listings and private messages.</p>
+    <p class="muted">Previously viewed public pages may still be available until you reconnect.</p>
+    <button class="btn btn-primary" type="button" data-reload-page>Try again</button>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Manage categories</h1><p class="muted mb-0">Organise books so students can find them quickly.</p></div></div>
+{% include "_admin_nav.html" %}
+
+<div class="grid grid-2 section">
+  <section class="card">
+    <h2>{{ 'Edit category' if edit_id else 'Add category' }}</h2>
+    <form method="post" action="{{ url_for('admin.categories') }}{{ '?edit=' ~ edit_id if edit_id else '' }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if edit_id %}<input type="hidden" name="category_id" value="{{ edit_id }}">{% endif %}
+      {{ ui.field(form.name, 'bi-tag', 'A short, recognisable name') }}
+      {{ ui.field(form.icon, 'bi-icons', 'Bootstrap icon class, e.g. bi-book') }}
+      {{ ui.field(form.description, '', 'Optional description shown to students') }}
+      <div class="row mt-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ 'Save changes' if edit_id else 'Create category' }}</button>
+        {% if edit_id %}<a class="btn btn-outline" href="{{ url_for('admin.categories') }}">Cancel</a>{% endif %}
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Existing categories</h2>
+    <div class="table-wrap"><table><thead><tr><th>Name</th><th>Usage</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+      {% for category in items %}<tr>
+        <td><i class="bi {{ category.icon or 'bi-book' }}"></i> <strong>{{ category.name }}</strong>
+          {% if category.description %}<br><small class="muted">{{ category.description|truncate(60) }}</small>{% endif %}</td>
+        <td>{{ category.materials|length + category.library_books|length }}</td>
+        <td>{% if category.is_active %}<span class="badge badge-ok">Active</span>{% else %}<span class="badge badge-muted">Hidden</span>{% endif %}</td>
+        <td><div class="table-actions">
+          <a class="btn btn-sm btn-outline" href="{{ url_for('admin.categories', edit=category.id) }}">Edit</a>
+          <form method="post" action="{{ url_for('admin.toggle_category', category_id=category.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline">{{ 'Hide' if category.is_active else 'Show' }}</button>
+          </form>
+        </div></td>
+      </tr>{% else %}
+        <tr><td colspan="4">{{ ui.empty_state('No categories yet', 'Create your first category to get started.', icon='bi-tags') }}</td></tr>
+      {% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+{% endblock %}

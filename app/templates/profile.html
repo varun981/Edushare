@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="card">
+  <div class="profile-head">
+    {% if profile.profile_image and profile.profile_image != 'default-avatar.svg' %}
+      <img class="profile-avatar" src="{{ url_for('static', filename='uploads/' ~ profile.profile_image) }}" alt="{{ profile.display_name }}">
+    {% elif profile.profile_image %}
+      <img class="profile-avatar" src="{{ url_for('static', filename='images/' ~ profile.profile_image) }}" alt="{{ profile.display_name }}">
+    {% else %}<div class="profile-avatar">{{ profile.display_name[0]|upper }}</div>{% endif %}
+    <div class="grow">
+      <h1 class="mb-0">{{ profile.display_name }}</h1>
+      <p class="muted mb-0">{{ profile.educational_qualification or 'Student' }}{% if profile.institution %} · {{ profile.institution }}{% endif %}</p>
+      {% if profile.bio %}<p class="mt-1 mb-0">{{ profile.bio }}</p>{% endif %}
+    </div>
+    {% if is_own %}
+      <div class="row"><a class="btn btn-outline" href="{{ url_for('profile.edit_profile') }}"><i class="bi bi-pencil"></i> Edit profile</a>
+      <a class="btn btn-outline" href="{{ url_for('profile.change_password') }}">Change password</a></div>
+    {% elif current_user.is_authenticated %}
+      <form method="post" action="{{ url_for('messaging.start_conversation', user_id=profile.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="topic" value="General"><button class="btn btn-primary">Message</button></form>
+    {% endif %}
+  </div>
+  <hr class="divider">
+  <div class="profile-facts">
+    {% if is_own %}
+      <div class="profile-fact"><i class="bi bi-envelope"></i><strong>Email:</strong> {{ profile.email }}</div>
+      <div class="profile-fact"><i class="bi bi-telephone"></i><strong>Phone:</strong> {{ profile.phone or 'Not provided' }}</div>
+      <div class="profile-fact"><i class="bi bi-geo-alt"></i><strong>Location:</strong> {{ profile.location or '—' }}</div>
+    {% endif %}
+    <div class="profile-fact"><i class="bi bi-mortarboard"></i><strong>Qualification:</strong> {{ profile.educational_qualification or '—' }}</div>
+    <div class="profile-fact"><i class="bi bi-building"></i><strong>Institution:</strong> {{ profile.institution or '—' }}</div>
+    <div class="profile-fact"><i class="bi bi-calendar"></i><strong>Joined:</strong> {{ profile.created_at|datefmt }}</div>
+  </div>
+</div>
+
+<section class="section mt-3">
+  <div class="section-head"><h2>{{ 'Your uploaded books' if is_own else 'Books shared by ' ~ profile.display_name }}</h2></div>
+  <div class="grid grid-4">{% for item in my_materials %}{{ ui.material_card(item) }}{% else %}
+    {{ ui.empty_state('No books listed', 'Books shared by this student will appear here.', url_for('marketplace.create_listing') if is_own else none, 'List a book') }}{% endfor %}</div>
+</section>
+
+{% if is_own %}
+<div class="grid grid-2">
+  <section class="card"><h2>Sold / completed</h2>
+    {% set completed = [] %}{% for item in my_materials %}{% if item.status in ['sold','unavailable'] %}{% set _ = completed.append(item) %}{% endif %}{% endfor %}
+    {% for item in completed %}<div class="list-item"><strong>{{ item.title }}</strong><span class="badge badge-muted">{{ item.status }}</span></div>
+    {% else %}<p class="muted">No completed listings yet.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Donated books</h2>
+    {% set donated = my_materials|selectattr('listing_type','equalto','donation')|list %}
+    {% for item in donated %}<div class="list-item"><a href="{{ url_for('marketplace.book_detail', material_id=item.id) }}">{{ item.title }}</a>{{ ui.status_badge(item.status) }}</div>
+    {% else %}<p class="muted">No donations yet.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Exchange requests</h2>
+    {% for req in my_exchange_requests %}<div class="list-item"><div class="grow"><strong>{{ req.material.title }}</strong><small>{{ req.owner.display_name }}</small></div>{{ ui.status_badge(req.status) }}</div>
+    {% else %}<p class="muted">No exchange requests yet.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Donation requests</h2>
+    {% for req in my_donation_requests %}<div class="list-item"><div class="grow"><strong>{{ req.material.title }}</strong><small>{{ req.owner.display_name }}</small></div>{{ ui.status_badge(req.status) }}</div>
+    {% else %}<p class="muted">No donation requests yet.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Purchase requests</h2>
+    {% for req in my_purchase_requests %}<div class="list-item"><div class="grow"><strong>{{ req.material.title }}</strong><small>{{ req.seller.display_name }}</small></div>{{ ui.status_badge(req.status) }}</div>
+    {% else %}<p class="muted">No purchase requests yet.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Borrowed books</h2>
+    {% for rec in my_borrowings %}<div class="list-item"><div class="grow"><strong>{{ rec.book.title }}</strong><small>Due {{ rec.expected_return_date|datefmt }}</small></div>{{ ui.status_badge(rec.status) }}</div>
+    {% else %}<p class="muted">No borrowed books yet.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Lending history</h2>
+    {% for rec in my_lendings %}<div class="list-item"><div class="grow"><strong>{{ rec.book.title }}</strong><small>{{ rec.borrower.display_name }}</small></div>{{ ui.status_badge(rec.status) }}</div>
+    {% else %}<p class="muted">No lending history yet.</p>{% endfor %}
+  </section>
+  <section class="card"><h2>Library books shared</h2>
+    {% for book in my_library_books %}<div class="list-item"><a href="{{ url_for('library.book_detail', book_id=book.id) }}">{{ book.title }}</a>{{ ui.status_badge(book.status) }}</div>
+    {% else %}<p class="muted">No library books yet.</p>{% endfor %}
+  </section>
+</div>
+<section class="section"><a class="btn btn-outline" href="{{ url_for('messaging.inbox') }}"><i class="bi bi-chat-dots"></i> View your messages</a>
+  <a class="btn btn-outline" href="{{ url_for('notifications.notifications') }}"><i class="bi bi-bell"></i> View notifications</a></section>
+{% endif %}
+{% endblock %}

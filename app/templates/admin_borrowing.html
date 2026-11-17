@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Borrowing records</h1><p class="muted mb-0">{{ pagination.total }} record(s) across the community library.</p></div></div>
+{% include "_admin_nav.html" %}
+
+<div class="tabs" aria-label="Borrowing status">
+  {% for option in ['', 'pending', 'approved', 'borrowed', 'overdue', 'returned', 'rejected'] %}
+    <a class="tab {% if request.args.get('status', '') == option %}active{% endif %}"
+       href="{{ url_for('admin.borrowing', status=option) }}">{{ option|capitalize if option else 'All' }}</a>
+  {% endfor %}
+</div>
+
+<div class="table-wrap"><table><thead><tr><th>Book</th><th>Borrower</th><th>Owner</th><th>Status</th><th>Borrowed</th><th>Due</th><th>Returned</th></tr></thead><tbody>
+  {% for rec in pagination.items %}<tr>
+    <td><a href="{{ url_for('library.book_detail', book_id=rec.book_id) }}">{{ rec.book.title|truncate(40) }}</a></td>
+    <td><a href="{{ url_for('profile.public_profile', user_id=rec.borrower_id) }}">{{ rec.borrower.display_name }}</a></td>
+    <td><a href="{{ url_for('profile.public_profile', user_id=rec.owner_id) }}">{{ rec.owner.display_name }}</a></td>
+    <td>{{ ui.status_badge(rec.status) }}</td>
+    <td>{{ rec.borrow_date|datefmt }}</td>
+    <td>
+      {{ rec.expected_return_date|datefmt }}
+      {% if rec.days_left is not none and rec.status in ['borrowed', 'overdue'] %}
+        <br><small class="{{ 'text-danger' if rec.days_left < 0 else 'muted' }}">
+          {{ rec.days_left }} day(s) {{ 'overdue' if rec.days_left < 0 else 'remaining' }}
+        </small>
+      {% endif %}
+    </td>
+    <td>{{ rec.actual_return_date|datefmt }}</td>
+  </tr>{% else %}
+    <tr><td colspan="7">{{ ui.empty_state('No borrowing records', 'Loans from the community library will appear here.', icon='bi-bookmark-heart') }}</td></tr>
+  {% endfor %}
+</tbody></table></div>
+{{ ui.pagination(pagination, 'admin.borrowing', status=request.args.get('status', '')) }}
+{% endblock %}

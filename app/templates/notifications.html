@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Notifications</h1><p class="muted mb-0">Requests, messages, approvals and return reminders.</p></div>
+  <form method="post" action="{{ url_for('notifications.mark_all_read') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-outline btn-sm">Mark all as read</button></form>
+</div>
+<div class="card">
+  {% for notification in pagination.items %}
+  <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+    <div class="notification-icon"><i class="bi {% if notification.type == 'new_message' %}bi-chat-dots{% elif 'reminder' in notification.type or notification.type == 'overdue' %}bi-calendar-check{% elif 'request' in notification.type %}bi-send{% else %}bi-bell{% endif %}"></i></div>
+    <div class="grow">
+      <strong>{{ notification.title }}</strong>
+      <p class="mb-0">{{ notification.message }}</p>
+      <small class="muted">{{ notification.created_at|datefmt('%d %b %Y, %H:%M') }}</small>
+    </div>
+    {% if notification.link %}<a class="btn btn-sm btn-outline" data-mark-read="{{ notification.id }}" href="{{ url_for('notifications.open_notification', notification_id=notification.id) }}">Open</a>{% endif %}
+  </div>
+  {% else %}{{ ui.empty_state('No notifications yet', 'Updates about your requests and messages will appear here.', url_for('main.index'), 'Go to dashboard', 'bi-bell') }}{% endfor %}
+</div>
+{{ ui.pagination(pagination, 'notifications.notifications') }}
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% macro filter_fields(form) %}
+  {{ form.hidden_tag() }}
+  {{ ui.field(form.q, 'bi-search', 'Title, author, subject or keyword') }}
+  {{ ui.field(form.category_id, 'bi-grid') }}
+  {{ ui.field(form.level, 'bi-mortarboard') }}
+  {{ ui.field(form.condition, 'bi-check2-circle') }}
+  {{ ui.field(form.location, 'bi-geo-alt') }}
+  <div class="grid grid-2">
+    {{ ui.field(form.min_price, hint='Min ₹') }}
+    {{ ui.field(form.max_price, hint='Max ₹') }}
+  </div>
+  {{ ui.field(form.availability, 'bi-circle') }}
+  {{ ui.field(form.sort, 'bi-sort-down', hint='Sorting updates when you apply filters.', css='full') }}
+  <button class="btn btn-primary btn-block" type="submit"><i class="bi bi-funnel"></i> Apply filters</button>
+  <a class="btn btn-outline btn-block mt-1" href="{{ url_for('marketplace.marketplace') }}">Clear filters</a>
+{% endmacro %}
+{% block content %}
+<div class="section-head">
+  <div><h1>Marketplace</h1><p class="muted mb-0">Find affordable books and study materials from students like you.</p></div>
+  <a class="btn btn-primary" href="{{ url_for('marketplace.create_listing') }}"><i class="bi bi-plus-lg"></i> Sell a book</a>
+</div>
+
+<div class="toolbar">
+  <span class="result-count">{{ pagination.total }} listing{{ '' if pagination.total == 1 else 's' }} found</span>
+  <div class="row">
+    <button type="button" class="btn btn-sm btn-outline filter-toggle" data-filter-toggle><i class="bi bi-funnel"></i> Filters</button>
+    <form method="get" action="{{ url_for('marketplace.marketplace') }}" class="sort-control">
+      {% for key in request.args.keys() %}{% if key not in ['sort','page'] %}<input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">{% endif %}{% endfor %}
+      <label class="sr-only" for="quick-sort">Sort by</label>
+      <select id="quick-sort" name="sort" data-auto-submit>
+        <option value="recent" {% if request.args.get('sort')=='recent' %}selected{% endif %}>Recently added</option>
+        <option value="price_asc" {% if request.args.get('sort')=='price_asc' %}selected{% endif %}>Price: Low to High</option>
+        <option value="price_desc" {% if request.args.get('sort')=='price_desc' %}selected{% endif %}>Price: High to Low</option>
+      </select>
+    </form>
+  </div>
+</div>
+
+<div class="layout-sidebar">
+  <div class="filter-drawer" id="filter-drawer">
+    <div class="filter-panel">
+      <h3>Filters <button type="button" class="btn btn-sm btn-outline" data-filter-close>Close</button></h3>
+      <form method="get" action="{{ url_for('marketplace.marketplace') }}">{{ filter_fields(form) }}</form>
+    </div>
+  </div>
+  <div>
+    <div class="grid grid-3">
+      {% for item in pagination.items %}{{ ui.material_card(item) }}{% else %}
+      {{ ui.empty_state('No books matched your search', 'Try different keywords or clear a filter or two.', url_for('marketplace.marketplace'), 'Browse all books') }}
+      {% endfor %}
+    </div>
+    {{ ui.pagination(pagination, 'marketplace.marketplace') }}
+  </div>
+</div>
+{% endblock %}

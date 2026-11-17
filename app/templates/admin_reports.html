@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Reported content</h1><p class="muted mb-0">Review community reports and take action.</p></div></div>
+{% include "_admin_nav.html" %}
+
+<div class="tabs" aria-label="Report status">
+  {% for option in ['open', 'reviewed', 'resolved', 'dismissed', ''] %}
+    <a class="tab {% if status == option %}active{% endif %}" href="{{ url_for('admin.reports', status=option) }}">
+      {{ option|capitalize if option else 'All' }}
+    </a>
+  {% endfor %}
+</div>
+
+<div class="table-wrap"><table><thead><tr><th>Report</th><th>Reported content</th><th>Reporter</th><th>Status</th><th>Received</th></tr></thead><tbody>
+  {% for report in pagination.items %}<tr>
+    <td>
+      <strong>{{ report.reason }}</strong>
+      {% if report.details %}<br><small class="muted">{{ report.details|truncate(90) }}</small>{% endif %}
+    </td>
+    <td>
+      {% if report.material %}<a href="{{ url_for('marketplace.book_detail', material_id=report.material_id) }}">{{ report.material.title|truncate(40) }}</a>
+      {% elif report.library_book %}<a href="{{ url_for('library.book_detail', book_id=report.library_book_id) }}">{{ report.library_book.title|truncate(40) }}</a>
+      {% elif report.reported_user %}<a href="{{ url_for('profile.public_profile', user_id=report.reported_user_id) }}">{{ report.reported_user.display_name }}</a>
+      {% else %}—{% endif %}
+    </td>
+    <td><a href="{{ url_for('profile.public_profile', user_id=report.reporter_id) }}">{{ report.reporter.display_name }}</a></td>
+    <td>{{ ui.status_badge(report.status) }}</td>
+    <td>{{ report.created_at|datefmt }}</td>
+  </tr>
+  <tr><td colspan="5" class="report-review">
+    <form method="post" action="{{ url_for('admin.resolve_report', report_id=report.id) }}" class="row">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="status" value="{{ status }}">
+      <select name="decision" style="width:auto" aria-label="Decision">
+        <option value="resolved" {% if report.status == 'resolved' %}selected{% endif %}>Resolved</option>
+        <option value="reviewed" {% if report.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+        <option value="dismissed" {% if report.status == 'dismissed' %}selected{% endif %}>Dismissed</option>
+        <option value="open" {% if report.status == 'open' %}selected{% endif %}>Reopen</option>
+      </select>
+      <input type="text" name="admin_notes" value="{{ report.admin_notes or '' }}" placeholder="Admin notes (optional)" maxlength="1000" style="flex:1;min-width:180px">
+      <button class="btn btn-sm btn-primary" type="submit">Update report</button>
+    </form>
+    {% if report.admin_notes %}<small class="muted">Previous note: {{ report.admin_notes }}</small>{% endif %}
+    {% if report.reviewed_at %}<small class="muted"> · Reviewed {{ report.reviewed_at|datefmt }}</small>{% endif %}
+  </td></tr>
+  {% else %}
+    <tr><td colspan="5">{{ ui.empty_state('No reports in this view', 'Reports from students will appear here for review.', icon='bi-flag') }}</td></tr>
+  {% endfor %}
+</tbody></table></div>
+{{ ui.pagination(pagination, 'admin.reports', status=status) }}
+{% endblock %}

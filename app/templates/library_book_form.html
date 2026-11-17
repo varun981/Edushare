@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>{% if book %}Edit library book{% else %}Add a book to the library{% endif %}</h1>
+  <p class="muted mb-0">Set a default borrowing duration — there are never any fees.</p></div></div>
+<div class="card form-card">
+  <form method="post" enctype="multipart/form-data" class="form-grid" data-loading>
+    {{ form.hidden_tag() }}
+    {{ ui.field(form.title, 'bi-book', css='full') }}
+    {{ ui.field(form.author, 'bi-person') }}
+    {{ ui.field(form.subject, 'bi-journal') }}
+    {{ ui.field(form.category_id, 'bi-grid') }}
+    {{ ui.field(form.condition, 'bi-check2-circle') }}
+    {{ ui.field(form.borrowing_duration_days, 'bi-calendar') }}
+    {{ ui.field(form.description, css='full') }}
+    {{ ui.field(form.location, 'bi-geo-alt') }}
+    <div class="field"><button type="button" class="btn btn-sm btn-outline" data-geolocate><i class="bi bi-crosshair"></i> Add my coordinates</button>
+      <span class="hint">Optional — lets nearby students see an approximate distance.</span></div>
+    {% if book and book.images %}
+    <div class="field full"><label>Current photos</label><div class="thumb-row">
+      {% for image in book.images %}<label class="thumb"><img src="{{ image.url }}" alt="">
+        <input type="checkbox" name="delete_images" value="{{ image.id }}" style="position:absolute;opacity:0"></label>{% endfor %}
+    </div><span class="hint">Tick a photo to remove it when saving.</span></div>
+    {% endif %}
+    <div class="field full" data-image-preview>{{ form.images.label }}{{ form.images(class='form-control') }}
+      {% for error in form.images.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+      <div class="thumb-row image-preview-row"></div>
+      <span class="hint">Up to 5 images, 3 MB each.</span></div>
+    <div class="field full">{{ form.submit(class='btn btn-primary btn-lg btn-block') }}</div>
+  </form>
+</div>
+{% endblock %}

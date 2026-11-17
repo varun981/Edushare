@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<nav class="mb-2" aria-label="Breadcrumb"><a href="{{ url_for('main.index') }}">Home</a> / <a href="{{ url_for('marketplace.marketplace') }}">Marketplace</a> / {{ material.title|truncate(40) }}</nav>
+<div class="detail-grid">
+  <div>
+    <div class="card">
+      {% if material.primary_image %}
+        <img id="main-image" class="detail-image" src="{{ material.primary_image.url }}" alt="{{ material.title }}">
+      {% else %}<div id="main-image" class="detail-placeholder"><i class="bi bi-book"></i></div>{% endif %}
+      {% if material.images|length > 1 %}
+      <div class="thumb-row">
+        {% for image in material.images %}
+          <button type="button" class="thumb {% if loop.first %}active{% endif %}" data-image-url="{{ image.url }}" aria-label="View image {{ loop.index }}">
+            <img src="{{ image.url }}" alt=""></button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="stack">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <span class="badge badge-info">{{ material.category.name if material.category else 'Study material' }}</span>
+        {{ ui.status_badge(material.status) }}
+      </div>
+      <h1 class="detail-title mt-1">{{ material.title }}</h1>
+      <div class="detail-meta">
+        <span><i class="bi bi-person"></i> {{ material.author or 'Unknown author' }}</span>
+        <span><i class="bi bi-book"></i> {{ material.subject or 'General' }}</span>
+        <span><i class="bi bi-mortarboard"></i> {{ material.educational_level or 'Any level' }}</span>
+      </div>
+      <div class="spread">
+        <div class="detail-price">{% if material.listing_type == 'sale' %}{{ material.price|currency }}{% else %}Free{% endif %}</div>
+        {% if material.original_price and material.listing_type == 'sale' %}<span class="muted"><s>{{ material.original_price|currency }}</s></span>{% endif %}
+      </div>
+      <div class="info-list">
+        <div><i class="bi bi-gem"></i><span>Condition: <strong>{{ material.condition }}</strong></span></div>
+        <div><i class="bi bi-geo-alt"></i><span>{{ material.location or 'Location not specified' }}{% if distance %}<span class="distance-pill">~{{ distance|round(1) }} km away</span>{% endif %}</span></div>
+        <div><i class="bi bi-clock"></i><span>Listed {{ material.created_at|datefmt }}</span></div>
+      </div>
+      <h3>Description</h3>
+      <p style="white-space:pre-line">{{ material.description or 'No description provided by the seller.' }}</p>
+
+      {% if current_user.is_authenticated and (material.user_id == current_user.id or current_user.is_admin) %}
+      <div class="row mt-2">
+        <a class="btn btn-outline" href="{{ url_for('marketplace.edit_listing', material_id=material.id) }}"><i class="bi bi-pencil"></i> Edit listing</a>
+        <form method="post" action="{{ url_for('marketplace.delete_listing', material_id=material.id) }}" data-confirm="Delete this listing permanently? This cannot be undone.">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger" type="submit"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3><i class="bi bi-person-circle"></i> Shared by</h3>
+      <div class="seller-card">
+        {% if material.seller.profile_image and material.seller.profile_image != 'default-avatar.svg' %}
+          <img class="seller-avatar" src="{{ url_for('static', filename='uploads/' ~ material.seller.profile_image) }}" alt="">
+        {% else %}<div class="seller-avatar">{{ material.seller.display_name[0]|upper }}</div>{% endif %}
+        <div class="grow"><strong><a href="{{ url_for('profile.public_profile', user_id=material.seller.id) }}">{{ material.seller.display_name }}</a></strong>
+          <small>{{ material.seller.institution or 'EduShare member' }}</small></div>
+      </div>
+      {% if current_user.is_authenticated and current_user.id != material.user_id %}
+        <div class="row mt-2">
+          <form method="post" action="{{ url_for('messaging.start_conversation', user_id=material.user_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="topic" value="{{ material.title }}">
+            <button class="btn btn-outline" type="submit"><i class="bi bi-chat-dots"></i> Message owner</button>
+          </form>
+          <form method="post" action="{{ url_for('marketplace.contact_seller', material_id=material.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-outline" type="submit"><i class="bi bi-chat-square-text"></i> Ask about this item</button>
+          </form>
+        </div>
+      {% elif not current_user.is_authenticated %}
+        <p class="muted mt-2">Log in to contact the owner or send a request.</p>
+      {% endif %}
+    </div>
+
+    {% if current_user.is_authenticated and current_user.id != material.user_id and material.is_available %}
+    <div class="card">
+      {% if material.listing_type == 'sale' %}
+        <h3><i class="bi bi-hand-thumbs-up"></i> Interested in buying?</h3>
+        <p class="muted">Send purchase interest to the seller. Payments and collection are arranged directly between you.</p>
+        <form method="post" action="{{ url_for('marketplace.purchase_interest', material_id=material.id) }}" class="stack">
+          {{ purchase_form.hidden_tag() }}
+          {{ ui.field(purchase_form.message, hint='Optional: when can you collect?') }}
+          {{ purchase_form.submit(class='btn btn-primary btn-block') }}
+        </form>
+      {% elif material.listing_type == 'exchange' %}
+        <h3><i class="bi bi-arrow-repeat"></i> Propose an exchange</h3>
+        <form method="post" action="{{ url_for('exchange.send_request', material_id=material.id) }}" class="stack">
+          {{ exchange_form.hidden_tag() }}
+          {{ ui.field(exchange_form.offered_material_id, hint='Choose one of your available books to offer.') }}
+          {{ ui.field(exchange_form.message, hint='Tell the owner what you would like to swap.') }}
+          {{ exchange_form.submit(class='btn btn-primary btn-block') }}
+        </form>
+      {% else %}
+        <h3><i class="bi bi-gift"></i> Request this free book</h3>
+        <form method="post" action="{{ url_for('donation.request_donation', material_id=material.id) }}" class="stack">
+          {{ donation_form.hidden_tag() }}
+          {{ ui.field(donation_form.message, hint='Optional note to the donor') }}
+          {{ donation_form.submit(class='btn btn-accent btn-block') }}
+        </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if current_user.is_authenticated and current_user.id != material.user_id %}
+    <details class="card">
+      <summary class="muted" style="cursor:pointer">Report this listing</summary>
+      <form method="post" action="{{ url_for('marketplace.report_listing', material_id=material.id) }}" class="stack mt-2">
+        {{ report_form.hidden_tag() }}
+        {{ ui.field(report_form.reason) }}{{ ui.field(report_form.details) }}
+        {{ report_form.submit(class='btn btn-sm btn-outline') }}
+      </form>
+    </details>
+    {% endif %}
+  </div>
+</div>
+
+{% if related %}
+<section class="section mt-3">
+  <div class="section-head"><h2>More like this</h2></div>
+  <div class="grid grid-4">{% for item in related %}{{ ui.material_card(item) }}{% endfor %}</div>
+</section>
+{% endif %}
+{% endblock %}

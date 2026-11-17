@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Donation activity</h1><p class="muted mb-0">{{ pagination.total }} donation request(s)</p></div></div>
+{% include "_admin_nav.html" %}
+
+<div class="tabs" aria-label="Donation request status">
+  {% for option in ['', 'pending', 'approved', 'rejected', 'completed'] %}
+    <a class="tab {% if request.args.get('status', '') == option %}active{% endif %}"
+       href="{{ url_for('admin.donations', status=option) }}">{{ option|capitalize if option else 'All' }}</a>
+  {% endfor %}
+</div>
+
+<div class="table-wrap"><table><thead><tr><th>Book</th><th>Requester</th><th>Donor</th><th>Status</th><th>Requested</th><th>Message</th></tr></thead><tbody>
+  {% for req in pagination.items %}<tr>
+    <td><a href="{{ url_for('marketplace.book_detail', material_id=req.material_id) }}">{{ req.material.title|truncate(40) }}</a></td>
+    <td><a href="{{ url_for('profile.public_profile', user_id=req.requester_id) }}">{{ req.requester.display_name }}</a></td>
+    <td><a href="{{ url_for('profile.public_profile', user_id=req.owner_id) }}">{{ req.owner.display_name }}</a></td>
+    <td>{{ ui.status_badge(req.status) }}</td>
+    <td>{{ req.created_at|datefmt }}</td>
+    <td>{{ req.message|truncate(60) if req.message else '—' }}</td>
+  </tr>{% else %}
+    <tr><td colspan="6">{{ ui.empty_state('No donation requests', 'Student donation requests will appear here.', icon='bi-gift') }}</td></tr>
+  {% endfor %}
+</tbody></table></div>
+{{ ui.pagination(pagination, 'admin.donations', status=request.args.get('status', '')) }}
+{% endblock %}

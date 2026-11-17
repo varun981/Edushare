@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div><h1>Free books</h1><p class="muted mb-0">Educational materials donated by students — free for anyone who needs them.</p></div>
+  <a class="btn btn-accent" href="{{ url_for('donation.new_donation') }}"><i class="bi bi-gift"></i> Donate a book</a>
+</div>
+
+<div class="tabs" data-tabs>
+  <button class="tab active" data-tab="browse"><i class="bi bi-search"></i> Browse free books</button>
+  {% if current_user.is_authenticated %}
+    <button class="tab" data-tab="my-listings"><i class="bi bi-gift"></i> My donations ({{ my_listings|length }})</button>
+    <button class="tab" data-tab="my-requests"><i class="bi bi-send"></i> My requests ({{ sent_requests|length }})</button>
+    <button class="tab" data-tab="incoming"><i class="bi bi-inbox"></i> Requests received ({{ received_requests|length }})</button>
+  {% endif %}
+</div>
+
+<div class="tab-panel" data-tab-panel="browse">
+  <div class="toolbar"><span class="result-count">{{ pagination.total }} donated books</span>
+    <form method="get" action="{{ url_for('donation.donation') }}" class="row">
+      <input type="search" name="q" placeholder="Search free books" value="{{ request.args.get('q','') }}" style="width:auto">
+      <button class="btn btn-sm btn-outline" type="submit"><i class="bi bi-search"></i></button>
+    </form>
+  </div>
+  <div class="grid grid-3">
+    {% for item in pagination.items %}{{ ui.material_card(item) }}{% else %}
+      {{ ui.empty_state('No donated books yet', 'Donated books will appear here. You can donate one too!', url_for('donation.new_donation'), 'Donate a book', 'bi-gift') }}{% endfor %}
+  </div>
+  {{ ui.pagination(pagination, 'donation.donation') }}
+</div>
+
+<div class="tab-panel" data-tab-panel="my-listings" hidden>
+  {% if my_listings %}
+  <div class="grid grid-3">{% for item in my_listings %}{{ ui.material_card(item) }}{% endfor %}</div>
+  {% else %}{{ ui.empty_state('You have not donated yet', 'Your kindness can help another student succeed.', url_for('donation.new_donation'), 'Donate a book', 'bi-gift') }}{% endif %}
+</div>
+
+<div class="tab-panel" data-tab-panel="my-requests" hidden>
+  {% if sent_requests %}
+  <div class="table-wrap"><table><thead><tr><th>Book</th><th>Donor</th><th>Status</th><th>Requested</th></tr></thead><tbody>
+    {% for req in sent_requests %}<tr>
+      <td><a href="{{ url_for('marketplace.book_detail', material_id=req.material_id) }}">{{ req.material.title }}</a></td>
+      <td>{{ req.owner.display_name }}</td><td>{{ ui.status_badge(req.status) }}</td><td>{{ req.created_at|datefmt }}</td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty_state('No donation requests', 'Browse free books and request one.', url_for('donation.donation'), 'Browse free books', 'bi-gift') }}{% endif %}
+</div>
+
+<div class="tab-panel" data-tab-panel="incoming" hidden>
+  {% if received_requests %}
+  <div class="table-wrap"><table><thead><tr><th>Book</th><th>Requested by</th><th>Status</th><th>Action</th></tr></thead><tbody>
+    {% for req in received_requests %}<tr>
+      <td>{{ req.material.title }}</td>
+      <td><a href="{{ url_for('profile.public_profile', user_id=req.requester_id) }}">{{ req.requester.display_name }}</a></td>
+      <td>{{ ui.status_badge(req.status) }}</td>
+      <td><div class="table-actions">
+        {% if req.status == 'pending' %}
+        <form method="post" action="{{ url_for('donation.approve_request', request_id=req.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-accent">Approve</button></form>
+        <form method="post" action="{{ url_for('donation.reject_request', request_id=req.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline">Reject</button></form>
+        {% elif req.status == 'approved' %}
+        <form method="post" action="{{ url_for('donation.complete_request', request_id=req.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-primary">Mark handed over</button></form>
+        {% else %}—{% endif %}
+      </div></td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}{{ ui.empty_state('No requests yet', 'When someone requests your donated books, you will see them here.', url_for('donation.donation'), 'Browse donations', 'bi-inbox') }}{% endif %}
+</div>
+{% endblock %}

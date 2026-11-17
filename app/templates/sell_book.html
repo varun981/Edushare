@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block content %}
+<div class="section-head"><div>
+  <h1>{% if material %}Edit listing{% elif listing_type == 'exchange' %}Add a book for exchange{% elif listing_type == 'donation' %}Donate a book{% else %}Sell a book{% endif %}</h1>
+  <p class="muted mb-0">All fields marked by the form are validated on the server. Photos are optional but help a lot.</p>
+</div></div>
+<div class="card form-card">
+  <form method="post" enctype="multipart/form-data" class="form-grid" data-loading>
+    {{ form.hidden_tag() }}
+    {% if listing_type %}<input type="hidden" name="listing_type" value="{{ listing_type }}">{% else %}{{ ui.field(form.listing_type) }}{% endif %}
+    {{ ui.field(form.title, 'bi-book', css='full') }}
+    {{ ui.field(form.author, 'bi-person') }}
+    {{ ui.field(form.subject, 'bi-journal') }}
+    {{ ui.field(form.educational_level, 'bi-mortarboard') }}
+    {{ ui.field(form.category_id, 'bi-grid') }}
+    {{ ui.field(form.condition, 'bi-check2-circle') }}
+    {% if listing_type != 'donation' and listing_type != 'exchange' %}
+      {{ ui.field(form.price, hint='Set 0 if you only want to express interest.') }}
+      {{ ui.field(form.original_price, hint='Optional — show the original MRP.') }}
+    {% endif %}
+    {{ ui.field(form.description, hint='Mention edition, pages, highlights, etc.', css='full') }}
+    {{ ui.field(form.location, 'bi-geo-alt', 'City, campus or neighbourhood.') }}
+    <div class="field">
+      <button type="button" class="btn btn-sm btn-outline" data-geolocate><i class="bi bi-crosshair"></i> Add my coordinates</button>
+      <span class="hint">Optional — helps show approximate distance to nearby students.</span>
+    </div>
+    {{ ui.field(form.contact_info, 'bi-telephone', 'Optional contact detail shown to interested students.') }}
+
+    {% if material and material.images %}
+    <div class="field full">
+      <label>Current photos</label>
+      <div class="thumb-row">
+        {% for image in material.images %}
+        <label class="thumb" title="Check to delete this photo">
+          <img src="{{ image.url }}" alt="">
+          <input type="checkbox" name="delete_images" value="{{ image.id }}" style="position:absolute;opacity:0">
+        </label>
+        {% endfor %}
+      </div>
+      <span class="hint">Tick a photo to remove it when saving.</span>
+    </div>
+    {% endif %}
+
+    <div class="field full" data-image-preview>
+      {{ form.images.label }}
+      {{ form.images(class='form-control') }}
+      {% for error in form.images.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+      <div class="thumb-row image-preview-row"></div>
+      <span class="hint">Up to 5 images, 3 MB each. Allowed: JPG, PNG, WEBP, GIF.</span>
+    </div>
+    <div class="field full">{{ form.submit(class='btn btn-primary btn-lg btn-block') }}</div>
+  </form>
+</div>
+{% endblock %}

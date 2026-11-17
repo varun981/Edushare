@@ -1,0 +1,104 @@
+{% macro field(formfield, icon='', hint='', css='') -%}
+  <div class="field {{ css }}">
+    {{ formfield.label }}
+    {% if icon %}<div class="input-group" style="position:relative">
+      <i class="bi {{ icon }}" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)"></i>
+      {{ formfield(class='form-control', style='padding-left:38px') }}
+    </div>{% else %}{{ formfield(class='form-control') }}{% endif %}
+    {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+    {% for error in formfield.errors %}<span class="error-text">{{ error }}</span>{% endfor %}
+  </div>
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+  {% set cls = {'available':'ok','reserved':'warn','sold':'muted','unavailable':'muted',
+                'pending':'warn','accepted':'ok','approved':'ok','borrowed':'info','returned':'ok',
+                'rejected':'bad','completed':'ok','overdue':'bad','open':'warn','resolved':'ok',
+                'reviewed':'info','dismissed':'muted','active':'ok'}.get(status|lower,'muted') %}
+  <span class="badge badge-{{ cls }}">{{ status|capitalize }}</span>
+{%- endmacro %}
+
+{% macro image_box(url, alt, icon='bi-book', extra='') -%}
+  {% if url %}
+    <img class="card-image {{ extra }}" src="{{ url }}" alt="{{ alt }}" loading="lazy">
+  {% else %}
+    <div class="card-image card-image-placeholder {{ extra }}" role="img" aria-label="No photo available">
+      <i class="bi {{ icon }}"></i>
+    </div>
+  {% endif %}
+{%- endmacro %}
+
+{% macro material_card(item) -%}
+  <article class="item-card">
+    <a class="card-media" href="{{ url_for('marketplace.book_detail', material_id=item.id) }}">
+      {{ image_box(item.primary_image.url if item.primary_image else none, item.title) }}
+      {% if item.listing_type != 'sale' %}<span class="card-ribbon">{{ item.listing_type|capitalize }}</span>{% endif %}
+      {% if not item.is_available %}<span class="card-overlay-status">{{ item.status|capitalize }}</span>{% endif %}
+    </a>
+    <div class="card-body">
+      <div class="card-kicker">{{ item.category.name if item.category else 'Study material' }} · {{ item.condition }}</div>
+      <h3 class="card-title"><a href="{{ url_for('marketplace.book_detail', material_id=item.id) }}">{{ item.title }}</a></h3>
+      <p class="card-meta">{{ item.author or 'Unknown author' }}{% if item.subject %} · {{ item.subject }}{% endif %}</p>
+      <p class="card-meta"><i class="bi bi-geo-alt"></i> {{ item.location or 'Location not set' }}
+        {% if item._distance is defined and item._distance %}<span class="distance-pill">~{{ item._distance|round(1) }} km</span>{% endif %}
+      </p>
+      <div class="card-footer">
+        <span class="price {% if item.listing_type != 'sale' %}price-free{% endif %}">
+          {% if item.listing_type == 'sale' %}{{ item.price|currency }}{% else %}Free{% endif %}
+        </span>
+        <a class="btn btn-sm btn-outline" href="{{ url_for('marketplace.book_detail', material_id=item.id) }}">View details</a>
+      </div>
+    </div>
+  </article>
+{%- endmacro %}
+
+{% macro library_card(book) -%}
+  <article class="item-card">
+    <a class="card-media" href="{{ url_for('library.book_detail', book_id=book.id) }}">
+      {{ image_box(book.primary_image.url if book.primary_image else none, book.title, 'bi-journal-bookmark') }}
+      {% if book.status != 'available' %}<span class="card-overlay-status">{{ book.status|capitalize }}</span>{% endif %}
+    </a>
+    <div class="card-body">
+      <div class="card-kicker">Community Library · {{ book.condition }}</div>
+      <h3 class="card-title"><a href="{{ url_for('library.book_detail', book_id=book.id) }}">{{ book.title }}</a></h3>
+      <p class="card-meta">{{ book.author or 'Community collection' }}</p>
+      <p class="card-meta"><i class="bi bi-geo-alt"></i> {{ book.location or 'Location not set' }}</p>
+      <div class="card-footer">
+        <span class="price price-free">Borrow free</span>
+        <a class="btn btn-sm btn-outline" href="{{ url_for('library.book_detail', book_id=book.id) }}">View details</a>
+      </div>
+    </div>
+  </article>
+{%- endmacro %}
+
+{% macro pagination(pager, endpoint, q=none, status=none, type=none) -%}
+  {# Keep existing filters when a student moves between result pages. #}
+  {% set filter_keys = ['q', 'category_id', 'level', 'condition', 'location', 'min_price',
+                        'max_price', 'availability', 'sort', 'status', 'type'] %}
+  {% set params = {} %}
+  {% for key in filter_keys %}
+    {% set value = request.args.get(key) if request else none %}
+    {% if value %}{% set _ = params.update({key: value}) %}{% endif %}
+  {% endfor %}
+  {% if q %}{% set _ = params.update({'q': q}) %}{% endif %}
+  {% if status %}{% set _ = params.update({'status': status}) %}{% endif %}
+  {% if type %}{% set _ = params.update({'type': type}) %}{% endif %}
+  {% if pager.pages > 1 %}
+  <nav class="pagination" aria-label="Pagination">
+    {% if pager.has_prev %}<a class="btn btn-sm btn-outline" href="{{ url_for(endpoint, page=pager.prev_num, **params) }}">‹ Prev</a>{% endif %}
+    {% for page in pager.iter_pages() %}
+      {% if page %}<a class="page-link {% if page == pager.page %}active{% endif %}" href="{{ url_for(endpoint, page=page, **params) }}">{{ page }}</a>{% else %}<span class="dots">…</span>{% endif %}
+    {% endfor %}
+    {% if pager.has_next %}<a class="btn btn-sm btn-outline" href="{{ url_for(endpoint, page=pager.next_num, **params) }}">Next ›</a>{% endif %}
+  </nav>
+  {% endif %}
+{%- endmacro %}
+
+{% macro empty_state(title, message, action_url=none, action_label='Browse materials', icon='bi-inbox') -%}
+  <div class="empty-state">
+    <i class="bi {{ icon }}"></i>
+    <h3>{{ title }}</h3>
+    <p>{{ message }}</p>
+    {% if action_url %}<a class="btn btn-primary" href="{{ action_url }}">{{ action_label }}</a>{% endif %}
+  </div>
+{%- endmacro %}
